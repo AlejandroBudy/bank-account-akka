@@ -1,18 +1,20 @@
-package com.alejandrobudy.actors
+package com.alejandrobudy.bank.actors
 
 import akka.actor.typed.{ActorRef, Behavior}
 import akka.persistence.typed.PersistenceId
 import akka.persistence.typed.scaladsl.{Effect, EventSourcedBehavior}
 
 // A single bank account
-class PersistentBankAccount {
+object PersistentBankAccount {
 
   // commands = messages
   sealed trait Command
-  case class CreateBankAccount(user: String, currency: String, initialBalance: Double, replyTo: ActorRef[Response])
-      extends Command
-  case class UpdateBalance(id: String, currency: String, amount: Double, replyTo: ActorRef[Response]) extends Command
-  case class GetBankAccount(id: String, replyTo: ActorRef[Response])                                  extends Command
+  object Command {
+    case class CreateBankAccount(user: String, currency: String, initialBalance: Double, replyTo: ActorRef[Response])
+        extends Command
+    case class UpdateBalance(id: String, currency: String, amount: Double, replyTo: ActorRef[Response]) extends Command
+    case class GetBankAccount(id: String, replyTo: ActorRef[Response])                                  extends Command
+  }
   // events = to persist in cassandra
   trait Event
   case class BankAccountCreated(bankAccount: BankAccount) extends Event
@@ -22,11 +24,16 @@ class PersistentBankAccount {
 
   // responses
   sealed trait Response
-  case class BankAccountCreatedResponse(id: String) extends Response
-  // If account not exists -> None
-  case class BankAccountBalanceUpdatedResponse(maybeBankAccount: Option[BankAccount]) extends Response
-  case class GetBankAccountResponse(maybeBankAccount: Option[BankAccount])            extends Response
+  object Response {
+    case class BankAccountCreatedResponse(id: String) extends Response
+    // If account not exists -> None
+    case class BankAccountBalanceUpdatedResponse(maybeBankAccount: Option[BankAccount]) extends Response
+    case class GetBankAccountResponse(maybeBankAccount: Option[BankAccount])            extends Response
 
+  }
+  import Response._
+
+  import PersistentBankAccount.Command._
   // command handler = message handler => persist event
   val commandHandler: (BankAccount, Command) => Effect[Event, BankAccount] = (state, command) =>
     command match {
