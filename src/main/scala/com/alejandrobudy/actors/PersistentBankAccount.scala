@@ -1,4 +1,4 @@
-package com.alejandrobudy.bank.actors
+package com.alejandrobudy.actors
 
 import akka.actor.typed.{ActorRef, Behavior}
 import akka.persistence.typed.PersistenceId
@@ -15,25 +15,25 @@ object PersistentBankAccount {
     case class UpdateBalance(id: String, currency: String, amount: Double, replyTo: ActorRef[Response]) extends Command
     case class GetBankAccount(id: String, replyTo: ActorRef[Response])                                  extends Command
   }
+
+  import Command._
+
   // events = to persist in cassandra
   trait Event
   case class BankAccountCreated(bankAccount: BankAccount) extends Event
   case class BalanceUpdated(amount: Double)               extends Event
-  // state
   case class BankAccount(id: String, user: String, currency: String, balance: Double)
 
   // responses
   sealed trait Response
   object Response {
-    case class BankAccountCreatedResponse(id: String) extends Response
-    // If account not exists -> None
-    case class BankAccountBalanceUpdatedResponse(maybeBankAccount: Option[BankAccount]) extends Response
+    case class BankAccountCreatedResponse(id: String)                                   extends Response
+    case class BankAccountBalanceUpdatedResponse(maybeBankAccount: Option[BankAccount]) extends Response // If account not exists -> None
     case class GetBankAccountResponse(maybeBankAccount: Option[BankAccount])            extends Response
-
   }
+
   import Response._
 
-  import PersistentBankAccount.Command._
   // command handler = message handler => persist event
   val commandHandler: (BankAccount, Command) => Effect[Event, BankAccount] = (state, command) =>
     command match {
